@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Management - Real-Time Payment Verification</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #eef2ff, #fdf2f8);
+    min-height: 100vh;
+  }
+
+  #ordersContainer {
+    max-height: 70vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  #ordersContainer::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  #ordersContainer::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+
+  .notification {
+    transition: all 0.3s ease;
+    animation: fadeIn 0.3s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+</style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <header class="sticky top-0 z-20 bg-gradient-to-r from-indigo-600 to-purple-600 shadow-lg backdrop-blur-lg bg-opacity-90">
+    <div class="container mx-auto flex justify-between items-center px-6 py-4 text-white">
+      <div class="flex items-center space-x-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18l-2 13H5L3 3z" />
+        </svg>
+        <div>
+          <h1 class="text-2xl font-bold">Order Management</h1>
+          <p class="text-indigo-200 text-sm">Real-Time Payment Verification</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-8">
+    <!-- Orders -->
+    <div id="ordersContainer" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8"></div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center py-16">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div>
+      <p class="mt-4 text-gray-600 text-lg font-medium">Loading orders...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-16">
+      <div class="text-gray-400 text-7xl mb-4">📦</div>
+      <h3 class="text-2xl font-semibold text-gray-700 mb-2">No Pending Orders</h3>
+      <p class="text-gray-500 text-lg">All payments have been verified.</p>
+    </div>
+  </main>
+
+  <!-- Floating Notification Container -->
+  <div id="notificationContainer" class="fixed top-5 right-5 space-y-3 z-50"></div>
+
+<script>
+// =================== Firebase Config ===================
+const firebaseConfig = {
+  apiKey: "AIzaSyCGMvFT7bJjQVJGlU3qZdfZEq9W_jZpH8g",
+  authDomain: "checkorder-52699.firebaseapp.com",
+  databaseURL: "https://checkorder-52699-default-rtdb.firebaseio.com",
+  projectId: "checkorder-52699",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const secondConfig = {
+  apiKey: "AIzaSyCN5ngY-q2DFfce2Q-Ju2WtreemecrrGkQ",
+  authDomain: "staff-e61b9.firebaseapp.com",
+  databaseURL: "https://staff-e61b9-default-rtdb.firebaseio.com",
+  projectId: "staff-e61b9",
+};
+const secondApp = firebase.initializeApp(secondConfig, "secondApp");
+const secondDb = secondApp.database();
+
+// =================== Load Orders ===================
+function loadOrders() {
+  const ordersRef = db.ref("orders");
+  const ordersContainer = document.getElementById("ordersContainer");
+  const loadingState = document.getElementById("loadingState");
+  const emptyState = document.getElementById("emptyState");
+
+  ordersRef.on("value", (snapshot) => {
+    loadingState.style.display = "none";
+    const data = snapshot.val();
+    if (!data) {
+      ordersContainer.innerHTML = "";
+      emptyState.classList.remove("hidden");
+      return;
+    }
+
+    const orders = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+    emptyState.classList.add("hidden");
+
+    ordersContainer.innerHTML = orders.map(order => {
+      const itemsArr = Array.isArray(order.items)
+        ? order.items
+        : Object.values(order.items || {});
+
+      return `
+      <div class="glass rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 border border-indigo-100">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold text-gray-800">🆔 ${order.id}</h2>
+          <button onclick="verifyPayment('${order.id}')"
+            class="px-4 py-2 rounded-xl font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:scale-105 transition">
+            Verify
+          </button>
+        </div>
+        <div class="space-y-2 text-gray-700">
+          <p><span class="font-medium">💰 Total:</span> ₹${order.totalAmount || 0}</p>
+          <p class="text-sm text-gray-500">📅 ${new Date(order.createdAt || Date.now()).toLocaleString()}</p>
+        </div>
+        <div class="border-t mt-4 pt-3">
+          <h3 class="font-semibold text-gray-800 mb-2">Items:</h3>
+          <div class="space-y-2">
+            ${itemsArr.map(item => `
+              <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                <div>
+                  <span class="font-medium">${item.name}</span>
+                  <span class="text-gray-500 ml-2">× ${item.qty || 0}</span>
+                  <div class="text-sm text-gray-600">₹${item.price || 0} each</div>
+                </div>
+                <div class="font-semibold text-gray-800">₹${item.total || (item.price * item.qty) || 0}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+  });
+}
+
+// =================== Verify Payment ===================
+function verifyPayment(orderId) {
+  const button = document.querySelector(`[onclick="verifyPayment('${orderId}')"]`);
+  button.innerHTML = '<div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Verifying...';
+  button.disabled = true;
+
+  const orderRef = db.ref(`orders/${orderId}`);
+
+  orderRef.once("value").then(snapshot => {
+    const orderData = snapshot.val();
+    if (!orderData) throw new Error("Order not found");
+
+    const verifiedAt = Date.now();
+
+    return secondDb.ref(`verifiedOrders/${orderId}`).set({
+      ...orderData,
+      verifiedAt: verifiedAt
+    }).then(() => {
+      return db.ref(`orders/${orderId}`).remove();
+    });
+  })
+  .then(() => {
+    showNotification(`✅ Order #${orderId} verified!`, "success");
+  })
+  .catch(err => {
+    console.error("❌ Error:", err);
+    showNotification(`Error verifying order: ${err.message}`, "error");
+  });
+}
+
+// =================== Notifications ===================
+function showNotification(message, type) {
+  const container = document.getElementById("notificationContainer");
+  const n = document.createElement("div");
+  n.className = `notification px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${
+    type === "success"
+      ? "bg-green-600 text-white"
+      : "bg-red-600 text-white"
+  }`;
+  n.textContent = message;
+  container.appendChild(n);
+  setTimeout(() => n.remove(), 4000);
+}
+
+// =================== Init ===================
+document.addEventListener("DOMContentLoaded", () => {
+  loadOrders();
+});
+</script>
+</body>
+</html>

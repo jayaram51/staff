@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🍽️ Real-Time Availability Manager</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+    min-height: 100vh;
+  }
+
+  /* Card animation */
+  .food-card {
+    transition: all 0.25s ease;
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  .food-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Custom toggle switch */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #e5e7eb;
+    transition: .3s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #10b981;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+
+  /* Toast styling */
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    padding: 12px 18px;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(6px);
+    animation: fadeIn 0.3s ease;
+  }
+
+  .toast.success {
+    background: linear-gradient(135deg, #10b981, #059669);
+  }
+
+  .toast.info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+
+<body>
+  <!-- 🔹 Header -->
+  <header class="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg px-6 py-4 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl">📊</span>
+      <div>
+        <h1 class="text-xl font-bold">Availability Manager</h1>
+        <p class="text-indigo-200 text-sm">Update canteen menu in real time</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- 🔹 Main Content -->
+  <main class="container mx-auto p-4">
+    <div id="menuList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </main>
+
+  <div id="toastContainer"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* ---------- Firebase (Fourth App) ---------- */
+const fourthFirebaseConfig = {
+  apiKey: "AIzaSyAO3rj5BVnuI0xgvVypjGSwCqZuiPiLIIE",
+  authDomain: "checkavailability-4daf3.firebaseapp.com",
+  databaseURL: "https://checkavailability-4daf3-default-rtdb.firebaseio.com",
+  projectId: "checkavailability-4daf3",
+  storageBucket: "checkavailability-4daf3.firebasestorage.app",
+  messagingSenderId: "12645745047",
+  appId: "1:12645745047:web:967328e3e812e412cf44d2"
+};
+const fourthApp = initializeApp(fourthFirebaseConfig, "fourthApp");
+const db = getDatabase(fourthApp);
+
+/* ---------- Menu items ---------- */
+const menuItems = [
+  "puri", "idly", "dosa", "onion dosa",
+  "fried rice", "chicken fried rice", "veg noodles", "egg noodles",
+  "chicken egg noodles", "samosa", "veg puff", "egg puff", "lays",
+  "thumbs-up", "coco-cola", "roti with chicken curry", "roti with dal", "roti with paneer"
+];
+
+const menuList = document.getElementById('menuList');
+const toastContainer = document.getElementById('toastContainer');
+
+function showToast(msg, type='info', ms=1500) {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  toastContainer.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+
+function normKey(name){ return String(name).trim().toLowerCase(); }
+
+function renderMenu(avail = {}) {
+  menuList.innerHTML = '';
+  for (const displayName of menuItems) {
+    const key = normKey(displayName);
+    const isAvail = Boolean(avail[key]);
+
+    const card = document.createElement('div');
+    card.className = "food-card rounded-2xl shadow-sm p-5 flex items-center justify-between border border-indigo-100";
+
+    card.innerHTML = `
+      <div class="flex-1">
+        <div class="text-base font-semibold text-gray-800">${displayName}</div>
+        <p class="text-sm ${isAvail ? 'text-green-600' : 'text-gray-500'}">
+          ${isAvail ? 'Available' : 'Unavailable'}
+        </p>
+      </div>
+      <label class="switch ml-3">
+        <input type="checkbox" ${isAvail ? 'checked' : ''} data-name="${displayName}" class="availabilityToggle">
+        <span class="slider"></span>
+      </label>
+    `;
+    menuList.appendChild(card);
+  }
+
+  document.querySelectorAll('.availabilityToggle').forEach(cb => {
+    cb.addEventListener('change', async (e) => {
+      const displayName = e.target.dataset.name;
+      const value = e.target.checked;
+      const key = normKey(displayName);
+      try {
+        await set(ref(db, `availability/${key}`), value);
+        showToast(`${displayName} → ${value ? 'Available' : 'Unavailable'}`, 'success');
+      } catch (err) {
+        console.error("Write error:", err);
+        showToast("Write error (see console)", "info", 2000);
+      }
+    });
+  });
+}
+
+/* ---------- Listen to changes ---------- */
+onValue(ref(db, 'availability'), snap => {
+  const raw = snap.exists() ? snap.val() : {};
+  const normalized = {};
+  Object.keys(raw).forEach(k => normalized[String(k).trim().toLowerCase()] = raw[k]);
+  renderMenu(normalized);
+});
+</script>
+</body>
+</html>

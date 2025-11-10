@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitchen Management Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #f8fafc, #e0e7ff);
+    min-height: 100vh;
+  }
+
+  .card {
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+  }
+
+  .header-icon {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+  }
+</style>
+</head>
+
+<body>
+  <!-- 🔹 Header -->
+  <header class="sticky top-0 bg-white/80 backdrop-blur-md border-b border-indigo-100 shadow-sm z-20">
+    <div class="max-w-4xl mx-auto px-6 py-6 text-center">
+      <div class="w-16 h-16 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4 header-icon">
+        <span class="text-white text-3xl">🍽️</span>
+      </div>
+      <h1 class="text-3xl font-bold text-gray-900">Kitchen Management Dashboard</h1>
+      <p class="text-gray-500 mt-2">Efficiently manage all kitchen operations</p>
+    </div>
+  </header>
+
+  <!-- 🔹 Dashboard Cards -->
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      
+      <!-- 🍱 Kitchen Orders -->
+      <div class="card rounded-2xl border border-gray-200 shadow-lg overflow-hidden hover:shadow-xl">
+        <div class="bg-gradient-to-r from-orange-500 to-red-500 p-8 text-center text-white">
+          <span class="text-6xl mb-3 block">📋</span>
+          <h2 class="text-2xl font-bold">Kitchen Orders</h2>
+          <p class="text-orange-100 mt-1">View and process new orders</p>
+        </div>
+        <div class="p-6">
+          <button id="kitchenOrdersBtn" 
+            class="w-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all">
+            Open Kitchen Orders
+          </button>
+        </div>
+      </div>
+
+      <!-- 💳 Student Payments -->
+      <div class="card rounded-2xl border border-gray-200 shadow-lg overflow-hidden hover:shadow-xl">
+        <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-8 text-center text-white">
+          <span class="text-6xl mb-3 block">💳</span>
+          <h2 class="text-2xl font-bold">Student Payments</h2>
+          <p class="text-green-100 mt-1">Verify and confirm transactions</p>
+        </div>
+        <div class="p-6">
+          <button id="verifyPaymentsBtn" 
+            class="w-full bg-green-500 hover:bg-green-600 active:scale-95 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all">
+            Verify Payments
+          </button>
+        </div>
+      </div>
+
+      <!-- 🍛 Food Availability -->
+      <div class="card rounded-2xl border border-gray-200 shadow-lg overflow-hidden hover:shadow-xl">
+        <div class="bg-gradient-to-r from-purple-500 to-indigo-600 p-8 text-center text-white">
+          <span class="text-6xl mb-3 block">🍛</span>
+          <h2 class="text-2xl font-bold">Food Availability</h2>
+          <p class="text-purple-100 mt-1">Update daily menu items</p>
+        </div>
+        <div class="p-6">
+          <button id="manageFoodBtn" 
+            class="w-full bg-purple-500 hover:bg-purple-600 active:scale-95 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all">
+            Manage Food
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- 🔹 Footer -->
+  <footer class="text-center text-gray-500 text-sm mt-10 pb-6">
+    <p>© 2025 College Canteen System — All Rights Reserved</p>
+  </footer>
+
+  <!-- 🔹 JS Logic -->
+  <script>
+    document.getElementById('kitchenOrdersBtn').addEventListener('click', () => {
+      window.open('Kitchenorders.html', '_blank');
+    });
+
+    document.getElementById('verifyPaymentsBtn').addEventListener('click', () => {
+      window.open('verifypayment.html', '_blank');
+    });
+
+    document.getElementById('manageFoodBtn').addEventListener('click', () => {
+      window.open('manageavailability.html', '_blank');
+    });
+
+    // Button click bounce
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', function() {
+        this.style.transform = 'scale(0.93)';
+        setTimeout(() => { this.style.transform = 'scale(1)'; }, 150);
+      });
+    });
+  </script>
+</body>
+</html>

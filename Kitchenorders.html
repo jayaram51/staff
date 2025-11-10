@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Management - Real-Time Orders</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    min-height: 100vh;
+  }
+
+  #ordersContainer {
+    max-height: 70vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  #ordersContainer::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #ordersContainer::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 4px;
+  }
+
+  .notification {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+</style>
+</head>
+
+<body class="bg-gray-50">
+
+<!-- 🔹 Header -->
+<header class="sticky top-0 z-20 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md">
+  <div class="container mx-auto flex justify-between items-center px-4 py-4">
+    <div class="flex items-center space-x-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h18l-2 13H5L3 3z" />
+      </svg>
+      <div>
+        <h1 class="text-xl font-bold leading-tight">Order Management</h1>
+        <p class="text-indigo-200 text-sm">Real-Time Canteen Orders</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- 🔹 Main Content -->
+<main class="container mx-auto px-4 py-6">
+  <!-- Orders Grid -->
+  <div id="ordersContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="text-center py-12">
+    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600"></div>
+    <p class="mt-4 text-gray-600 text-lg font-medium">Loading orders...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div id="emptyState" class="hidden text-center py-12">
+    <div class="text-gray-400 text-7xl mb-4">📦</div>
+    <h3 class="text-2xl font-semibold text-gray-700 mb-2">No Pending Orders</h3>
+    <p class="text-gray-500 text-lg">All orders are completed 🎉</p>
+  </div>
+</main>
+
+<!-- 🔹 Notifications -->
+<div id="notificationContainer" class="fixed top-4 right-4 space-y-3 z-50"></div>
+
+<script>
+/* --------------------------------------------------------
+   🔹 Firebase Setup
+-------------------------------------------------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyDuZXZx7DCRitt_4E2XIOmknhqHEUTUXL0",
+  authDomain: "student-326fc.firebaseapp.com",
+  databaseURL: "https://student-326fc-default-rtdb.firebaseio.com",
+  projectId: "student-326fc",
+  storageBucket: "student-326fc.firebasestorage.app",
+  messagingSenderId: "583442488877",
+  appId: "1:583442488877:web:db583172fc4594a11122a4",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const secondFirebaseConfig = {
+  apiKey: "AIzaSyCN5ngY-q2DFfce2Q-Ju2WtreemecrrGkQ",
+  authDomain: "staff-e61b9.firebaseapp.com",
+  databaseURL: "https://staff-e61b9-default-rtdb.firebaseio.com",
+  projectId: "staff-e61b9",
+  storageBucket: "staff-e61b9.firebasestorage.app",
+  messagingSenderId: "532002565855",
+  appId: "1:532002565855:web:811780a75dcc57b85a036a",
+};
+const secondApp = firebase.initializeApp(secondFirebaseConfig, "secondApp");
+const secondDb = secondApp.database();
+
+/* --------------------------------------------------------
+   🔹 Load Orders
+-------------------------------------------------------- */
+function loadOrders() {
+  const loadingState = document.getElementById("loadingState");
+  const ordersContainer = document.getElementById("ordersContainer");
+  const emptyState = document.getElementById("emptyState");
+
+  const ordersRef = secondDb.ref("verifiedOrders");
+
+  ordersRef.on("value", (snapshot) => {
+    loadingState.style.display = "none";
+    const data = snapshot.val();
+
+    if (!data) {
+      ordersContainer.innerHTML = "";
+      emptyState.classList.remove("hidden");
+      return;
+    }
+
+    const orders = Object.keys(data).map(id => ({ id, ...data[id] }));
+    if (orders.length === 0) {
+      ordersContainer.innerHTML = "";
+      emptyState.classList.remove("hidden");
+      return;
+    }
+
+    emptyState.classList.add("hidden");
+
+    ordersContainer.innerHTML = orders.map(order => {
+      const itemsArray = order.items ? Object.values(order.items) : [];
+      const itemSummary = itemsArray.map(i => `${i.name} × ${i.qty || 1}`).join(", ");
+
+      return `
+      <div class="glass rounded-2xl shadow-md hover:shadow-xl transition-all p-5 flex flex-col justify-between border-l-4 border-amber-500">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800 mb-2">#${order.id}</h2>
+          <p class="text-gray-600 mb-3 text-sm">${itemSummary}</p>
+          <div class="space-y-2 text-sm text-gray-700">
+            ${itemsArray.map(i => `
+              <div class="flex justify-between border-b py-1">
+                <span>${i.name} × ${i.qty}</span>
+                <span class="font-medium">₹${i.price * i.qty}</span>
+              </div>
+            `).join("")}
+          </div>
+          <p class="font-semibold text-indigo-700 mt-3">Total: ₹${order.totalAmount}</p>
+        </div>
+        <button 
+          onclick="completeOrder('${order.id}')"
+          class="mt-4 w-full py-2 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 active:scale-95 transition-all">
+          Mark as Completed ✅
+        </button>
+      </div>`;
+    }).join("");
+  });
+}
+
+/* --------------------------------------------------------
+   🔹 Complete Order
+-------------------------------------------------------- */
+function completeOrder(orderId) {
+  const button = document.querySelector(`[onclick="completeOrder('${orderId}')"]`);
+  if (!button) return;
+
+  button.innerHTML = '<div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Processing...';
+  button.disabled = true;
+
+  secondDb.ref(`verifiedOrders/${orderId}`).once("value")
+    .then(snapshot => {
+      const orderData = snapshot.val();
+      if (!orderData) throw new Error("Order not found!");
+
+      const studentOrder = {
+        orderId: orderId,
+        totalAmount: orderData.totalAmount || 0,
+        pushedAt: Date.now()
+      };
+
+      return db.ref(`orders/${orderId}`).set(studentOrder)
+        .then(() => secondDb.ref(`verifiedOrders/${orderId}`).remove())
+        .then(() => {
+          showNotification(`✅ Order #${orderId} marked completed`, "success");
+        });
+    })
+    .catch(err => {
+      console.error(err);
+      showNotification(`❌ Error completing order #${orderId}`, "error");
+    });
+}
+
+/* --------------------------------------------------------
+   🔹 Notifications
+-------------------------------------------------------- */
+function showNotification(message, type) {
+  const container = document.getElementById("notificationContainer");
+  const n = document.createElement("div");
+  n.className = `notification px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${
+    type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"
+  }`;
+  n.textContent = message;
+  container.appendChild(n);
+  setTimeout(() => n.remove(), 4000);
+}
+
+/* --------------------------------------------------------
+   🔹 Init
+-------------------------------------------------------- */
+document.addEventListener("DOMContentLoaded", loadOrders);
+</script>
+</body>
+</html>

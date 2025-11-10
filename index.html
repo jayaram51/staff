@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Canteen Staff Login</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* Background Gradient Animation */
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(120deg,#f4f7f9,#e0f7fa,#ffe0e0,#f4f7f9);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+}
+@keyframes gradientBG {
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
+}
+/* Floating Label Effect */
+.input-container input:focus + label,
+.input-container input:not(:placeholder-shown) + label {
+  top: -0.75rem;
+  left: 0.75rem;
+  font-size: 0.75rem;
+  color: #f472b6; /* Pink accent */
+  background: white;
+  padding: 0 0.25rem;
+}
+</style>
+</head>
+<body class="flex justify-center items-center min-h-screen">
+
+<div class="bg-white shadow-2xl rounded-3xl p-10 max-w-md w-full relative hover:shadow-3xl transition-all duration-300">
+  <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Staff Login</h2>
+
+  <div class="relative mb-6 input-container">
+    <input type="text" id="username" placeholder=" " class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-pink-400 peer" required>
+    <label for="username" class="absolute left-3 top-3 text-gray-400 transition-all duration-300 pointer-events-none">Username</label>
+  </div>
+
+  <div class="relative mb-6 input-container">
+    <input type="password" id="password" placeholder=" " class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-pink-400 peer" required>
+    <label for="password" class="absolute left-3 top-3 text-gray-400 transition-all duration-300 pointer-events-none">Password</label>
+  </div>
+
+  <button onclick="login()" class="w-full bg-pink-400 hover:bg-pink-500 text-white font-semibold py-3 rounded-xl shadow-lg transition-all duration-300 hover:scale-105">Login</button>
+
+  <p id="errorMsg" class="text-red-500 mt-4 text-center font-medium"></p>
+</div>
+
+<script>
+function login() {
+  const validUsername = "REC";
+  const validPassword = "canteen@123";
+
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  if(username === validUsername && password === validPassword){
+    window.location.href = "dashboard.html";
+  } else {
+    document.getElementById('errorMsg').innerText = "❌ Invalid username or password!";
+  }
+}
+</script>
+
+</body>
+</html>
